@@ -18,7 +18,7 @@ driver.get('https://www.goodreads.com/')
 loadTrang()
 
 linksCategory = driver.find_elements(By.CSS_SELECTOR,'.gr-hyperlink')
-linksCategory = [link.get_attribute('href') for link in linksCategory][3:32]
+linksCategory = [link.get_attribute('href') for link in linksCategory][19:32]
 
 for link in linksCategory:
     driver.get(link)
@@ -59,11 +59,14 @@ for link in linksCategory:
                     print('Đọc xong page')
                     published = driver.find_elements(By.CSS_SELECTOR,'div.FeaturedDetails p')[1].text
                     print('Đọc xong published')
-                    price = driver.find_element(By.CSS_SELECTOR,'button.Button.Button--buy.Button--medium').text.split(' ')[-1]
-                    if '$' in price:
-                        price = price
-                    else:
-                        price = 'Shop in Amazon'
+                    try:
+                        price = driver.find_element(By.CSS_SELECTOR,'button.Button.Button--buy.Button--medium').text.split(' ')[-1]
+                        if '$' in price:
+                            price = price
+                        else:
+                            price = 'Shop in Amazon'
+                    except:
+                        price = 'Not found'
                     print('Đọc xong price')
                     genres = [genre.find_element(By.CSS_SELECTOR,'a span').text for genre in driver.find_elements(By.CSS_SELECTOR,'span.BookPageMetadataSection__genreButton')]
                     print('Đọc xong genres')
