@@ -54,13 +54,14 @@ class MongoDBUnitopPipeline:
         # Connection String
         
         #self.client = pymongo.MongoClient('mongodb://mymongodb:27017')
-        self.client = pymongo.MongoClient('mongodb://mymongodb:27017')
-        self.db = self.client['dbmycrawler'] #Create Database      
+        self.client = pymongo.MongoClient('mongodb://mongodb:27017')
+        self.db = self.client['db_goodread'] #Create Database      
+
         pass
     
     def process_item(self, item, spider):
         
-        collection =self.db['tblunitop'] #Create Collection or Table
+        collection =self.db['tb_book'] #Create Collection or Table
         try:
             collection.insert_one(dict(item))
             return item
