@@ -57,9 +57,9 @@ services:
       KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://localhost:9092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
-      KAFKA_LOG_RETENTION_MS: 18000000 # 5h
-      KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS: 300000 # 5m
-      KAFKA_LOG_RETENTION_HOURS: 5
+#      KAFKA_LOG_RETENTION_MS: 18000000 # 5h
+#     KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS: 300000 # 5m
+#      KAFKA_LOG_RETENTION_HOURS: 5
     volumes:
       - ./kafka-data:/var/lib/kafka/data
     networks:
@@ -92,7 +92,52 @@ services:
       start_period: 30s # Give the service 30 seconds to start before beginning health checks
     restart: always
 
+  spark-master:
+    image: bitnami/spark:latest
+    command: bin/spark-class org.apache.spark.deploy.master.Master
+    ports:
+      - "9090:8080"
+      - "7077:7077"
+    networks:
+      - my_network
 
+  spark-worker:
+    image: bitnami/spark:latest
+    command: bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+    depends_on:
+      - spark-master
+    environment:
+      SPARK_MODE: worker
+      SPARK_WORKER_CORES: 2
+      SPARK_WORKER_MEMORY: 1g
+      SPARK_MASTER_URL: spark://spark-master:7077
+    networks:
+      - my_network  
+
+  postgres:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: goodread
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - my_network
+
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    depends_on:
+      - postgres
+    ports:
+      - "5050:80"
+    networks:
+      - my_network
 
 networks:
   my_network:
@@ -102,3 +147,5 @@ volumes:
     name: mongo-data
   kafka-data:
     name: kafka-data
+  postgres_data:
+    name: postgres_data
