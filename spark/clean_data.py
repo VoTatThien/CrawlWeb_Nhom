@@ -1,7 +1,8 @@
 import pyspark
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import regexp_replace, col, regexp_extract, when, date_format, to_date
-from pyspark.sql.types import StructType, StructField, StringType, FloatType, IntegerType, DateType
+from pyspark.sql.functions import regexp_replace, col, regexp_extract, when, to_date, lit, from_json, round
+from pyspark.sql.types import StructType, StructField, StringType, FloatType, IntegerType, DateType, Row
+
 import psycopg2
 
 # Connect to Kafka
@@ -18,34 +19,37 @@ def load_data(spark):
     df = spark.readStream.format("kafka") \
         .option("kafka.bootstrap.servers", "localhost:9092") \
         .option("subscribe", "goodread") \
+        .option("startingOffsets", "earliest") \
+        .option("failOnDataLoss", "false") \
         .load()
     return df
 
 # Format data
-schema = StructType([
+book_schema = StructType([
     StructField("author", StringType(), True),
     StructField("bookUrl", StringType(), True),
     StructField("bookname", StringType(), True),
     StructField("describe", StringType(), True),
-    StructField("prices", StringType(), True),
+    StructField("prices", FloatType(), True),
     StructField("publish", StringType(), True),
-    StructField("rating", StringType(), True),
-    StructField("ratingcount", StringType(), True),
-    StructField("reviews", StringType(), True),
-    StructField("fivestars", StringType(), True),
-    StructField("fourstars", StringType(), True),
-    StructField("threestars", StringType(), True),
-    StructField("twostars", StringType(), True),
-    StructField("onestar", StringType(), True),
-    StructField("pages", StringType(), True)
+    StructField("rating", FloatType(), True),
+    StructField("ratingcount", IntegerType(), True),
+    StructField("reviews", IntegerType(), True),
+    StructField("fivestars", IntegerType(), True),
+    StructField("fourstars", IntegerType(), True),
+    StructField("threestars", IntegerType(), True),
+    StructField("twostars", IntegerType(), True),
+    StructField("onestar",  IntegerType(), True),
+    StructField("pages", IntegerType(), True),
+    StructField("cover", StringType(), True),
+    StructField("pages_n", IntegerType(), True),
+    StructField("number", IntegerType(), True)
+
 ])
 
 # Format data
 def format_data(df):
-    df = df.selectExpr("CAST(value AS STRING)") \
-        .selectExpr(f"from_json(value, '{schema.simpleString()}') as jsonData") \
-        .select("jsonData.*")
-
+    df = df.select(from_json(col("value").cast("string"), book_schema).alias("data")).select("data.*")
     # Processing string data
     df = df.withColumn("onestar", regexp_replace(col("onestar"), r"[^\d]", "")) \
            .withColumn("twostars", regexp_replace(col("twostars"), r"[^\d]", "")) \
@@ -57,7 +61,6 @@ def format_data(df):
            .withColumn("prices", when(df["prices"].like("Kindle%"), regexp_extract(col("prices"), r"\$(\d+\.\d{2})", 1)).otherwise(0)) \
            .withColumn("publish", regexp_extract(col("publish"), r"(\w+ \d{1,2}, \d{4})", 1)) \
            .withColumn("publish", to_date(col("publish"), "MMMM d, yyyy")) \
-           .withColumn("publish", date_format(col("publish"), "dd/MM/yyyy")) \
            .withColumn("ratingcount", regexp_replace(col("ratingcount"), ",", "")) \
            .withColumn("reviews", regexp_replace(col("reviews"), ",", "")) \
            .drop("pages")
@@ -66,17 +69,28 @@ def format_data(df):
 
 # Convert data types
 def convert(df):
-    df = df.withColumn("pages_n", df["pages_n"].cast("int")) \
-           .withColumn("prices", df["prices"].cast("float")) \
-           .withColumn("onestar", df["onestar"].cast("int")) \
-           .withColumn("twostars", df["twostars"].cast("int")) \
-           .withColumn("threestars", df["threestars"].cast("int")) \
-           .withColumn("fourstars", df["fourstars"].cast("int")) \
-           .withColumn("fivestars", df["fivestars"].cast("int")) \
-           .withColumn("publish", df["publish"].cast("date")) \
-           .withColumn("rating", df["rating"].cast("float")) \
-           .withColumn("ratingcount", df["ratingcount"].cast("int")) \
-           .withColumn("reviews", df["reviews"].cast("int"))
+    # Định nghĩa ánh xạ giữa tên cột và kiểu dữ liệu phù hợp với PostgreSQL
+    column_types = {
+        "author": StringType(),
+        "bookUrl": StringType(),
+        "bookname": StringType(),
+        "describe": StringType(),
+        "rating": FloatType(),
+        "ratingcount": IntegerType(),
+        "reviews": IntegerType(),
+        "fivestars": IntegerType(),
+        "fourstars": IntegerType(),
+        "threestars": IntegerType(),
+        "twostars": IntegerType(),
+        "onestar": IntegerType(),
+        "pages_n": IntegerType(),
+        "prices": FloatType(),
+        "publish": DateType()
+    }
+
+    # Sử dụng vòng lặp để ép kiểu cho từng cột
+    for column, dtype in column_types.items():
+        df = df.withColumn(column, df[column].cast(dtype))
 
     return df
 
@@ -106,6 +120,7 @@ def create_database():
         cur.close()
         conn.close()
 
+
 def create_tables():
     try:
         conn = psycopg2.connect(
@@ -117,16 +132,18 @@ def create_tables():
         )
         cur = conn.cursor()
         
+        # Create authors table
         create_authors_table = """
-        CREATE TABLE IF NOT EXISTS authors (
-            author_id SERIAL PRIMARY KEY,
-            author_name VARCHAR(255) UNIQUE
+        CREATE TABLE IF NOT EXISTS Author (
+            id_author SERIAL PRIMARY KEY,
+            author_name VARCHAR(255) 
         );
         """
         
+        # Create ratings table
         create_ratings_table = """
-        CREATE TABLE IF NOT EXISTS ratings (
-            rating_id SERIAL PRIMARY KEY,
+        CREATE TABLE Rating (
+            rating_id INT PRIMARY KEY,
             rating FLOAT,
             fivestars INT,
             fourstars INT,
@@ -136,36 +153,46 @@ def create_tables():
         );
         """
         
+        # Create books table
         create_books_table = """
-        CREATE TABLE IF NOT EXISTS books (
-            book_id SERIAL PRIMARY KEY,
-            rating_id INT,
-            author_id INT,
-            bookname VARCHAR(255),
-            publish DATE,
-            prices FLOAT,
-            rating FLOAT,
-            rating_count INT,
-            reviews INT,
-            pages_n INT,
-            cover VARCHAR(50),
-            bookUrl VARCHAR(255),
-            FOREIGN KEY (author_id) REFERENCES authors(author_id),
-            FOREIGN KEY (rating_id) REFERENCES ratings(rating_id)
-        );
+        CREATE TABLE Book (
+        book_id INT PRIMARY KEY,
+        rating_id INT,
+        id_author INT,
+        rating FLOAT,
+        describe VARCHAR(255),
+        author_name VARCHAR(255),
+        bookname VARCHAR(255),
+        publish VARCHAR(255),
+        prices FLOAT,
+        rating_count INT,
+        reviews INT,
+        pages_n INT,
+        cover VARCHAR(255),
+        bookUrl VARCHAR(255),
+        fivestars INT,
+        fourstars INT,
+        threestars INT,
+        twostars INT,
+        onestar INT,
+        FOREIGN KEY (rating_id) REFERENCES Rating(rating_id),
+        FOREIGN KEY (id_author) REFERENCES Author(id_author)
+    );
         """
         
+        # Create details table
         create_details_table = """
-        CREATE TABLE IF NOT EXISTS details (
-            book_id INT PRIMARY KEY,
-            author_id INT,
-            describe TEXT,
-            book_title VARCHAR(255),
-            FOREIGN KEY (book_id) REFERENCES books(book_id),
-            FOREIGN KEY (author_id) REFERENCES authors(author_id)
+        CREATE TABLE IF NOT EXISTS Detail (
+        book_id INT PRIMARY KEY,
+        id_author INT,
+        describe VARCHAR(255),
+        bookUrl VARCHAR(255),
+        FOREIGN KEY (book_id) REFERENCES Book(book_id),
+        FOREIGN KEY (id_author) REFERENCES Author(id_author)
         );
         """
         
+        # Execute table creation queries
         cur.execute(create_authors_table)
         cur.execute(create_ratings_table)
         cur.execute(create_books_table)
@@ -184,80 +211,109 @@ def create_tables():
 
 # Insert data into PostgreSQL
 def insert_data(df):
-    query = df.writeStream \
+    df.writeStream \
+        .foreachBatch(write_to_db) \
         .outputMode("append") \
-        .foreachBatch(lambda batch_df, batch_id: write_batch_to_postgres(batch_df)) \
-        .start()
+        .start() \
+        .awaitTermination()
 
-    query.awaitTermination()
+# PostgreSQL connection properties
+jdbc_url = "jdbc:postgresql://localhost:5432/goodread"
+connection_properties = {
+    "user": "admin",
+    "password": "admin",
+    "driver": "org.postgresql.Driver"
+}
 
 # Function to write each batch to PostgreSQL
-def write_batch_to_postgres(batch_df):
-    rows_books = batch_df.select("bookname", "bookUrl", "author").distinct().collect()
-    rows_authors = batch_df.select("author").distinct().collect()
-    rows_details = batch_df.select("publish", "pages_n", "cover", "prices").distinct().collect()
-    rows_ratings = batch_df.select("rating", "ratingcount", "reviews", "onestar", "twostars", "threestars", "fourstars", "fivestars").distinct().collect()
+def write_to_db(df, epoch_id):
+    for row in df.collect():
+        book_data = row.asDict()
+        insert_rating_data(book_data)
+        insert_author_data(book_data)
+        insert_book_data(book_data)
+        insert_details_data(book_data)
 
-    # Use context manager for psycopg2
-    with psycopg2.connect(
-        dbname='goodread',
-        user='admin',
-        password='admin',
-        host='localhost',
-        port='5432'
-    ) as conn:
-        with conn.cursor() as cur:
-            try:
-                # Insert authors and get their IDs
-                author_ids = insert_authors(cur, rows_authors)
-                book_ids = insert_books(cur, rows_books, author_ids)
-                insert_details(cur, rows_details, book_ids)
-                insert_ratings(cur, rows_ratings, book_ids)
+# Function to insert books
+def insert_book_data(book_data):
+    book_row = Row(**book_data)
+    book_df = spark.createDataFrame([book_row])
 
-                conn.commit()
-                print("Data has been inserted successfully.")
-                
-            except Exception as e:
-                print(f"Error occurred while inserting data: {e}")
-                conn.rollback()
+    book_df_final = book_df.select(
+        lit(1).alias("book_id"),
+        lit(1).alias("rating_id"),
+        lit(1).alias("id_author"),
+        book_df.rating.alias("rating"),
+        book_df.describe.alias("describe"),
+        book_df.author.alias("author_name"),
+        book_df.bookname.alias("bookname"),
+        book_df.publish.alias("publish"),
+        book_df.prices.alias("prices"),
+        book_df.ratingcount.alias("rating_count"),
+        book_df.reviews.alias("reviews"),
+        book_df.pages_n.alias("pages_n"),
+        book_df.bookUrl.alias("bookUrl"),
+        book_df.fivestars.alias("fivestars"),
+        book_df.fourstars.alias("fourstars"),
+        book_df.threestars.alias("threestars"),
+        book_df.twostars.alias("twostars"),
+        book_df.onestar.alias("onestar")
+    )
 
-def insert_authors(cur, rows_authors):
-    author_ids = []
-    for author in rows_authors:
-        cur.execute("INSERT INTO authors (author_name) VALUES (%s) ON CONFLICT (author_name) DO NOTHING RETURNING author_id;", (author[0],))
-        author_id = cur.fetchone()
-        if author_id:
-            author_ids.append(author_id[0])
-    return author_ids
+    book_df_final.write.jdbc(url=jdbc_url, table="Book", mode="append", properties=connection_properties)
 
-def insert_books(cur, rows_books, author_ids):
-    book_ids = []
-    for book in rows_books:
-        author_id = author_ids[0]  # Assume the first author matches (you may adjust logic)
-        cur.execute("INSERT INTO books (bookname, bookUrl, author_id) VALUES (%s, %s, %s) ON CONFLICT (bookname) DO NOTHING RETURNING book_id;", (book[0], book[1], author_id))
-        book_id = cur.fetchone()
-        if book_id:
-            book_ids.append(book_id[0])
-    return book_ids
+# Function to insert authors
 
-def insert_details(cur, rows_details, book_ids):
-    for i, detail in enumerate(rows_details):
-        cur.execute("INSERT INTO details (book_id, publish, pages_n, cover) VALUES (%s, %s, %s, %s) ON CONFLICT (book_id) DO NOTHING;", (book_ids[i], detail[0], detail[1], detail[2]))
+def insert_author_data(book_data):
+    book_row = Row(**book_data)
+    book_df = spark.createDataFrame([book_row])
 
-def insert_ratings(cur, rows_ratings, book_ids):
-    for i, rating in enumerate(rows_ratings):
-        cur.execute("INSERT INTO ratings (rating, rating_count, reviews, onestar, twostars, threestars, fourstars, fivestars) VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING rating_id;", 
-                    (rating[0], rating[1], rating[2], rating[3], rating[4], rating[5], rating[6], rating[7]))
-        rating_id = cur.fetchone()
-        if rating_id:
-            cur.execute("UPDATE books SET rating_id = %s WHERE book_id = %s;", (rating_id[0], book_ids[i]))
+    author_df = book_df.select(
+        lit(1).alias("id_author"),
+        book_df.author.alias("author_name")
+    )
+
+    author_df.write.jdbc(url=jdbc_url, table="Author", mode="append", properties=connection_properties)
+
+
+# Function to insert book details
+def insert_details_data(book_data):
+    book_row = Row(**book_data)
+    book_df = spark.createDataFrame([book_row])
+
+    describe_df = book_df.select(
+        lit(1).alias("book_id"),
+        lit(1).alias("id_author"),
+        book_df.describe.alias("describe"),
+        book_df.bookUrl.alias("bookUrl")
+    )
+
+    describe_df.write.jdbc(url=jdbc_url, table="Detail", mode="append", properties=connection_properties)
+
+# Function to insert ratings
+def insert_rating_data(book_data):
+    book_row = Row(**book_data)
+    book_df = spark.createDataFrame([book_row])
+
+    rating_df = book_df.select(
+        lit(1).alias("rating_id"),
+        book_df.rating.alias("rating"),
+        book_df.fivestars.alias("fivestars"),
+        book_df.fourstars.alias("fourstars"),
+        book_df.threestars.alias("threestars"),
+        book_df.twostars.alias("twostars"),
+        book_df.onestar.alias("onestar")
+    )
+
+    rating_df.write.jdbc(url=jdbc_url, table="Rating", mode="append", properties=connection_properties)
+
 
 if __name__ == "__main__":
     create_database()
     create_tables()
     spark = connect_kafka()
     df = load_data(spark)
-    formatted_df = format_data(df)
-#   converted_df = convert(formatted_df)
-    insert_data(formatted_df)
+    df = format_data(df)
+    df = convert(df)
+    insert_data(df)
     spark.stop()
