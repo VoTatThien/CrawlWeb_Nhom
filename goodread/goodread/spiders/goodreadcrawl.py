@@ -26,7 +26,11 @@ class GoodreadcrawlSpider(scrapy.Spider):
             yield request
         
         next_page = response.xpath('//a[@class="next_page"]/@href').get()
+<<<<<<< HEAD
         if next_page and self.page_number < 11:
+=======
+        if next_page and self.page_number < 1:
+>>>>>>> kiet
             self.page_number += 1   
             self.logger.info(f'Found next page: {next_page}')
             yield scrapy.Request(url=response.urljoin(next_page), callback=self.parse)

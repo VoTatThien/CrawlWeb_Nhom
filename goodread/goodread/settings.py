@@ -23,7 +23,13 @@ AUTOTHROTTLE_ENABLED = True
 AUTOTHROTTLE_START_DELAY = 0
 ITEM_PIPELINES = {
    "goodread.pipelines.CSVDBBookPipeline": 100,
+<<<<<<< HEAD
    "goodread.pipelines.JsonDBBookPipeline": 200
+=======
+   "goodread.pipelines.JsonDBBookPipeline": 200,
+   "goodread.pipelines.MongoDBUnitopPipeline": 400,
+   "goodread.pipelines.KafkaPipeline": 400
+>>>>>>> kiet
 }
 
 
