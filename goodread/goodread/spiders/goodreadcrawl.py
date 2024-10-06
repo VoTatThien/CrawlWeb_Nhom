@@ -39,10 +39,9 @@ class GoodreadcrawlSpider(scrapy.Spider):
 
         item['bookname'] = response.xpath('normalize-space(//h1[@class="Text Text__title1"]/text())').get()
         item['author'] = response.xpath('normalize-space(//span[@class="ContributorLink__name"]/text())').get()
-        
+        item['authorUrl'] = response.xpath('//a[@class="ContributorLink"]/@href').get()
         item['prices'] = response.xpath('//*[@id="__next"]/div[2]/main/div[1]/div[1]/div/div[2]/div[2]/div/div[1]/button/span[1]/text()').get()
-
-
+        item['genre'] = response.xpath('/html/body/div[1]/div[2]/main/div[1]/div[2]/div[2]/div[2]/div[5]/ul/span[1]/span[2]/a/span/text()').getall()
 
         description = response.xpath('normalize-space(string(//span[@class="Formatted"]))').get()
         item['describe'] = ''.join(description)

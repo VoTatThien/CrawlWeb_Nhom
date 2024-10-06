@@ -25,31 +25,29 @@ def load_data(spark):
     return df
 
 # Format data
-book_schema = StructType([
+schema = StructType([
     StructField("author", StringType(), True),
     StructField("bookUrl", StringType(), True),
     StructField("bookname", StringType(), True),
     StructField("describe", StringType(), True),
-    StructField("prices", FloatType(), True),
+    StructField("prices", StringType(), True),
     StructField("publish", StringType(), True),
-    StructField("rating", FloatType(), True),
-    StructField("ratingcount", IntegerType(), True),
-    StructField("reviews", IntegerType(), True),
-    StructField("fivestars", IntegerType(), True),
-    StructField("fourstars", IntegerType(), True),
-    StructField("threestars", IntegerType(), True),
-    StructField("twostars", IntegerType(), True),
-    StructField("onestar",  IntegerType(), True),
-    StructField("pages", IntegerType(), True),
-    StructField("cover", StringType(), True),
-    StructField("pages_n", IntegerType(), True),
-    StructField("number", IntegerType(), True)
-
+    StructField("rating", StringType(), True),
+    StructField("ratingcount", StringType(), True),
+    StructField("reviews", StringType(), True),
+    StructField("fivestars", StringType(), True),
+    StructField("fourstars", StringType(), True),
+    StructField("threestars", StringType(), True),
+    StructField("twostars", StringType(), True),
+    StructField("onestar", StringType(), True),
+    StructField("pages", StringType(), True)
 ])
 
-# Format data
+# Format data   
 def format_data(df):
-    df = df.select(from_json(col("value").cast("string"), book_schema).alias("data")).select("data.*")
+    df = df.selectExpr("CAST(value AS STRING)") \
+        .selectExpr(f"from_json(value, '{schema.simpleString()}') as jsonData") \
+        .select("jsonData.*")
     # Processing string data
     df = df.withColumn("onestar", regexp_replace(col("onestar"), r"[^\d]", "")) \
            .withColumn("twostars", regexp_replace(col("twostars"), r"[^\d]", "")) \
@@ -68,31 +66,31 @@ def format_data(df):
     return df
 
 # Convert data types
-def convert(df):
-    # Định nghĩa ánh xạ giữa tên cột và kiểu dữ liệu phù hợp với PostgreSQL
-    column_types = {
-        "author": StringType(),
-        "bookUrl": StringType(),
-        "bookname": StringType(),
-        "describe": StringType(),
-        "rating": FloatType(),
-        "ratingcount": IntegerType(),
-        "reviews": IntegerType(),
-        "fivestars": IntegerType(),
-        "fourstars": IntegerType(),
-        "threestars": IntegerType(),
-        "twostars": IntegerType(),
-        "onestar": IntegerType(),
-        "pages_n": IntegerType(),
-        "prices": FloatType(),
-        "publish": DateType()
-    }
+# def convert(df):
+#     # Định nghĩa ánh xạ giữa tên cột và kiểu dữ liệu phù hợp với PostgreSQL
+#     column_types = {
+#         "author": StringType(),
+#         "bookUrl": StringType(),
+#         "bookname": StringType(),
+#         "describe": StringType(),
+#         "rating": FloatType(),
+#         "ratingcount": IntegerType(),
+#         "reviews": IntegerType(),
+#         "fivestars": IntegerType(),
+#         "fourstars": IntegerType(),
+#         "threestars": IntegerType(),
+#         "twostars": IntegerType(),
+#         "onestar": IntegerType(),
+#         "pages_n": IntegerType(),
+#         "prices": FloatType(),
+#         "publish": DateType()
+#     }
 
-    # Sử dụng vòng lặp để ép kiểu cho từng cột
-    for column, dtype in column_types.items():
-        df = df.withColumn(column, df[column].cast(dtype))
+#     # Sử dụng vòng lặp để ép kiểu cho từng cột
+#     for column, dtype in column_types.items():
+#         df = df.withColumn(column, df[column].cast(dtype))
 
-    return df
+#     return df
 
 # Create PostgreSQL tables based on provided schema
 def create_database():
@@ -131,73 +129,79 @@ def create_tables():
             port='5432'
         )
         cur = conn.cursor()
+
+    #create table
+        create_books_table = """
+        CREATE TABLE IF NOT EXISTS Book (
+            book_id SERIAL PRIMARY KEY,
+
         
         # Create authors table
-        create_authors_table = """
-        CREATE TABLE IF NOT EXISTS Author (
-            id_author SERIAL PRIMARY KEY,
-            author_name VARCHAR(255) 
-        );
-        """
+    #     create_authors_table = """
+    #     CREATE TABLE IF NOT EXISTS Author (
+    #         id_author SERIAL PRIMARY KEY,
+    #         author_name VARCHAR(255) 
+    #     );
+    #     """
         
-        # Create ratings table
-        create_ratings_table = """
-        CREATE TABLE Rating (
-            rating_id INT PRIMARY KEY,
-            rating FLOAT,
-            fivestars INT,
-            fourstars INT,
-            threestars INT,
-            twostars INT,
-            onestar INT
-        );
-        """
+    #     # Create ratings table
+    #     create_ratings_table = """
+    #     CREATE TABLE Rating (
+    #         rating_id INT PRIMARY KEY,
+    #         rating FLOAT,
+    #         fivestars INT,
+    #         fourstars INT,
+    #         threestars INT,
+    #         twostars INT,
+    #         onestar INT
+    #     );
+    #     """
         
-        # Create books table
-        create_books_table = """
-        CREATE TABLE Book (
-        book_id INT PRIMARY KEY,
-        rating_id INT,
-        id_author INT,
-        rating FLOAT,
-        describe VARCHAR(255),
-        author_name VARCHAR(255),
-        bookname VARCHAR(255),
-        publish VARCHAR(255),
-        prices FLOAT,
-        rating_count INT,
-        reviews INT,
-        pages_n INT,
-        cover VARCHAR(255),
-        bookUrl VARCHAR(255),
-        fivestars INT,
-        fourstars INT,
-        threestars INT,
-        twostars INT,
-        onestar INT,
-        FOREIGN KEY (rating_id) REFERENCES Rating(rating_id),
-        FOREIGN KEY (id_author) REFERENCES Author(id_author)
-    );
-        """
+    #     # Create books table
+    #     create_books_table = """
+    #     CREATE TABLE Book (
+    #     book_id INT PRIMARY KEY,
+    #     rating_id INT,
+    #     id_author INT,
+    #     rating FLOAT,
+    #     describe VARCHAR(255),
+    #     author_name VARCHAR(255),
+    #     bookname VARCHAR(255),
+    #     publish VARCHAR(255),
+    #     prices FLOAT,
+    #     rating_count INT,
+    #     reviews INT,
+    #     pages_n INT,
+    #     cover VARCHAR(255),
+    #     bookUrl VARCHAR(255),
+    #     fivestars INT,
+    #     fourstars INT,
+    #     threestars INT,
+    #     twostars INT,
+    #     onestar INT,
+    #     FOREIGN KEY (rating_id) REFERENCES Rating(rating_id),
+    #     FOREIGN KEY (id_author) REFERENCES Author(id_author)
+    # );
+    #     """
         
-        # Create details table
-        create_details_table = """
-        CREATE TABLE IF NOT EXISTS Detail (
-        book_id INT PRIMARY KEY,
-        id_author INT,
-        describe VARCHAR(255),
-        bookUrl VARCHAR(255),
-        FOREIGN KEY (book_id) REFERENCES Book(book_id),
-        FOREIGN KEY (id_author) REFERENCES Author(id_author)
-        );
-        """
+    #     # Create details table
+    #     create_details_table = """
+    #     CREATE TABLE IF NOT EXISTS Detail (
+    #     book_id INT PRIMARY KEY,
+    #     id_author INT,
+    #     describe VARCHAR(255),
+    #     bookUrl VARCHAR(255),
+    #     FOREIGN KEY (book_id) REFERENCES Book(book_id),
+    #     FOREIGN KEY (id_author) REFERENCES Author(id_author)
+    #     );
+    #     """
         
-        # Execute table creation queries
-        cur.execute(create_authors_table)
-        cur.execute(create_ratings_table)
-        cur.execute(create_books_table)
-        cur.execute(create_details_table)
-        conn.commit()
+    #     # Execute table creation queries
+    #     cur.execute(create_authors_table)
+    #     cur.execute(create_ratings_table)
+    #     cur.execute(create_books_table)
+    #     cur.execute(create_details_table)
+    #     conn.commit()
 
         print("Tables have been created successfully.")
         
@@ -310,10 +314,20 @@ def insert_rating_data(book_data):
 
 if __name__ == "__main__":
     create_database()
-    create_tables()
     spark = connect_kafka()
     df = load_data(spark)
-    df = format_data(df)
-    df = convert(df)
-    insert_data(df)
+    db_properties = {
+    "user": "admin",
+    "password": "admin",
+    "driver": "org.postgresql.Driver"
+    }
+    db_url = "jdbc:postgresql://localhost:5432/goodread"
+
+# Table name
+    table_name = "book_details"
+
+# Write DataFrame to PostgreSQL
+    df.writeStream .jdbc(url=db_url, table=table_name, mode="overwrite", properties=db_properties)
+
+# Stop Spark session
     spark.stop()

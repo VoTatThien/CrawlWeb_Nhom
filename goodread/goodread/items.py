@@ -23,4 +23,6 @@ class GoodreadItem(scrapy.Item):
     onestar = scrapy.Field()
     pages = scrapy.Field()
     publish = scrapy.Field()
+    authorUrl = scrapy.Field()
+    genre = scrapy.Field()
 
