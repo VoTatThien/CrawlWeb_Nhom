@@ -25,7 +25,7 @@ ITEM_PIPELINES = {
    "goodread.pipelines.CSVDBBookPipeline": 100,
    "goodread.pipelines.JsonDBBookPipeline": 200,
    "goodread.pipelines.MongoDBUnitopPipeline": 400,
-   "goodread.pipelines.KafkaPipeline": 400
+#   "goodread.pipelines.KafkaPipeline": 400
 }
 
 

@@ -1,31 +1,56 @@
 -- Tạo bảng dim_author
-CREATE TABLE dim_author (
-    author_id SERIAL PRIMARY KEY,
-    author_name VARCHAR(255) NOT NULL
+CREATE TABLE Author (
+    id_author SERIAL PRIMARY KEY,
+    author_name VARCHAR(255)
 );
 
--- Tạo bảng dim_book
-CREATE TABLE dim_book (
-    book_id SERIAL PRIMARY KEY,
-    bookname VARCHAR(255) NOT NULL,
-    author_id INTEGER REFERENCES dim_author(author_id),
-    prices DECIMAL(5, 2),
-    describe TEXT,
-    pages_n INTEGER,
-    cover VARCHAR(50),
-    publish DATE
-);
-
--- Tạo bảng fact_book_ratings
-CREATE TABLE fact_book_ratings (
-    book_id INTEGER REFERENCES dim_book(book_id),
+CREATE TABLE Rating (
+    book_id INT PRIMARY KEY,
     rating FLOAT,
-    ratingcount INTEGER,
-    reviews INTEGER,
-    fivestars INTEGER,
-    fourstars INTEGER,
-    threestars INTEGER,
-    twostars INTEGER,
-    onestar INTEGER,
-    PRIMARY KEY (book_id)
+    fivestars INT,
+    fourstars INT,
+    threestars INT,
+    twostars INT,
+    onestar INT
 );
+
+
+-- Tạo bảng book
+CREATE TABLE Book (
+    book_id SERIAL PRIMARY KEY,
+    rating_id INT,
+    id_author INT,
+    rating FLOAT,
+    description TEXT,
+    author_name VARCHAR(255),
+    bookname VARCHAR(255),
+    publish VARCHAR(255),
+    prices FLOAT,
+    rating_count INT,
+    reviews INT,
+    pages_n INT,
+    cover VARCHAR(255),
+    bookUrl VARCHAR(255),
+    fivestars INT,
+    fourstars INT,
+    threestars INT,
+    twostars INT,
+    onestar INT,
+    FOREIGN KEY (rating_id) REFERENCES Rating(book_id),
+    FOREIGN KEY (id_author) REFERENCES Author(id_author)
+);
+
+
+
+CREATE TABLE Describe (
+    book_id INT,
+    id_author INT,
+    description TEXT,
+    bookUrl VARCHAR(255),
+    PRIMARY KEY (book_id, id_author),
+    FOREIGN KEY (book_id) REFERENCES Book(book_id),
+    FOREIGN KEY (id_author) REFERENCES Author(id_author)
+);
+
+
+

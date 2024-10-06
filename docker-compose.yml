@@ -21,73 +21,73 @@ services:
     volumes:
       - ./mongo-data:/data/db
 
-  zookeeper:
-    image: wurstmeister/zookeeper:latest
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-    ports:
-      - 2181:2181
-    networks:
-      - my_network
-    healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "2181"] # Checking if port 2181 is accessible
-      interval: 30s   # Run the check every 30 seconds
-      timeout: 10s    # Fail if the check takes more than 10 seconds
-      retries: 5      # Mark as unhealthy after 5 failures
-      start_period: 20s # Time to wait before the health check starts
-    restart: always
+  # zookeeper:
+  #   image: wurstmeister/zookeeper:latest
+  #   environment:
+  #     ZOOKEEPER_CLIENT_PORT: 2181
+  #     ZOOKEEPER_TICK_TIME: 2000
+  #   ports:
+  #     - 2181:2181
+  #   networks:
+  #     - my_network
+  #   healthcheck:
+  #     test: ["CMD", "nc", "-z", "localhost", "2181"] # Checking if port 2181 is accessible
+  #     interval: 30s   # Run the check every 30 seconds
+  #     timeout: 10s    # Fail if the check takes more than 10 seconds
+  #     retries: 5      # Mark as unhealthy after 5 failures
+  #     start_period: 20s # Time to wait before the health check starts
+  #   restart: always
    
-  kafka:
-    image: wurstmeister/kafka:latest
-    depends_on:
-      zookeeper:
-        condition: service_healthy
-    links:
-      - zookeeper
-    ports:
-      - 9092:9092
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_LISTENERS: INTERNAL://:29092,EXTERNAL://:9092
-      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://localhost:9092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
-      KAFKA_LOG_RETENTION_MS: 18000000 # 5h
-      KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS: 300000 # 5m
-      KAFKA_LOG_RETENTION_HOURS: 5
-    volumes:
-      - ./kafka-data:/var/lib/kafka/data
-    networks:
-      - my_network
-    healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "9092"] # Checking if Kafka's port 9092 is open
-      interval: 30s   # Run the check every 30 seconds
-      timeout: 10s    # Fail if the check takes more than 10 seconds
-      retries: 5      # Mark as unhealthy after 5 failures
-      start_period: 30s # Time to wait before starting health checks
-    restart: always
+  # kafka:
+  #   image: wurstmeister/kafka:latest
+  #   depends_on:
+  #     zookeeper:
+  #       condition: service_healthy
+  #   links:
+  #     - zookeeper
+  #   ports:
+  #     - 9092:9092
+  #   environment:
+  #     KAFKA_BROKER_ID: 1
+  #     KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+  #     KAFKA_LISTENERS: INTERNAL://:29092,EXTERNAL://:9092
+  #     KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://localhost:9092
+  #     KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+  #     KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+  #     KAFKA_LOG_RETENTION_MS: 18000000 # 5h
+  #     KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS: 300000 # 5m
+  #     KAFKA_LOG_RETENTION_HOURS: 5
+  #   volumes:
+  #     - ./kafka-data:/var/lib/kafka/data
+  #   networks:
+  #     - my_network
+  #   healthcheck:
+  #     test: ["CMD", "nc", "-z", "localhost", "9092"] # Checking if Kafka's port 9092 is open
+  #     interval: 30s   # Run the check every 30 seconds
+  #     timeout: 10s    # Fail if the check takes more than 10 seconds
+  #     retries: 5      # Mark as unhealthy after 5 failures
+  #     start_period: 30s # Time to wait before starting health checks
+  #   restart: always
 
-  kafdrop:
-    image: obsidiandynamics/kafdrop
-    depends_on:
-      kafka:
-        condition: service_healthy
-    environment:
-      KAFKA_BROKERCONNECT: "kafka:29092"
-      # JVM_OPTS: "-Xms16M -Xmx512M -Xss180K -XX:-TieredCompilation -XX:+UseStringDeduplication -noverify"
-    ports:
-      - 9000:9000
-    networks:
-      - my_network
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:9000/ || exit 1"]
-      interval: 30s    # Check every 30 seconds
-      timeout: 10s     # Wait up to 10 seconds for the check to respond
-      retries: 5       # Retry up to 5 times before marking as unhealthy
-      start_period: 30s # Give the service 30 seconds to start before beginning health checks
-    restart: always
+  # kafdrop:
+  #   image: obsidiandynamics/kafdrop
+  #   depends_on:
+  #     kafka:
+  #       condition: service_healthy
+  #   environment:
+  #     KAFKA_BROKERCONNECT: "kafka:29092"
+  #     # JVM_OPTS: "-Xms16M -Xmx512M -Xss180K -XX:-TieredCompilation -XX:+UseStringDeduplication -noverify"
+  #   ports:
+  #     - 9000:9000
+  #   networks:
+  #     - my_network
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "curl -f http://localhost:9000/ || exit 1"]
+  #     interval: 30s    # Check every 30 seconds
+  #     timeout: 10s     # Wait up to 10 seconds for the check to respond
+  #     retries: 5       # Retry up to 5 times before marking as unhealthy
+  #     start_period: 30s # Give the service 30 seconds to start before beginning health checks
+  #   restart: always
 
   spark-master:
     image: bitnami/spark:latest
@@ -126,7 +126,7 @@ services:
 
   postgres:
     image: postgres:latest
-    container_name: postgres_dwh
+    container_name: postgres
     environment:
       - POSTGRES_USER=admin
       - POSTGRES_PASSWORD=admin
@@ -165,7 +165,7 @@ networks:
 volumes:
   mongo-data:
     name: mongo-data
-  kafka-data:
-    name: kafka-data
+  # kafka-data:
+  #   name: kafka-data
   postgres-data:
     name: postgres-data

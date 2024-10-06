@@ -1,51 +1,28 @@
 import re
 from pyspark.sql import functions as F
-from pyspark.sql.types import IntegerType, FloatType, StructType, StructField, StringType
-from pyspark.sql.functions import from_json, col
+from pyspark.sql.types import IntegerType, FloatType
+from pyspark.sql.functions import  col
 from pyspark.sql import SparkSession
 
 # Initialize Spark session
 spark = SparkSession.builder \
     .appName('SparkKafkaToPostgres') \
-    .config('spark.jars.packages', "org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.3,"
+    .config('spark.jars.packages', "org.mongodb.spark:mongo-spark-connector_2.12:3.0.0,"
                                     "org.postgresql:postgresql:42.5.0") \
     .getOrCreate()
 
-# Define the schema for the data in Kafka messages
-schema = StructType([
-    StructField("author", StringType(), True),
-    StructField("bookUrl", StringType(), True),
-    StructField("authorUrl", StringType(), True),
-    StructField("bookname", StringType(), True),
-    StructField("describe", StringType(), True),
-    StructField("prices", StringType(), True),
-    StructField("publish", StringType(), True),
-    StructField("rating", StringType(), True),
-    StructField("ratingcount", StringType(), True),
-    StructField("reviews", StringType(), True),
-    StructField("fivestars", StringType(), True),
-    StructField("fourstars", StringType(), True),
-    StructField("threestars", StringType(), True),
-    StructField("twostars", StringType(), True),
-    StructField("onestar", StringType(), True),
-    StructField("pages", StringType(), True)
-])
 
 # Read data from Kafka topic
-kafka_df = spark.readStream \
-    .format("kafka") \
-    .option("kafka.bootstrap.servers", "localhost:9092") \
-    .option("subscribe", "goodread") \
-    .option("startingOffsets", "earliest") \
-    .load()
+mongo_df = spark.read.format("mongo").option("uri", "mongodb://localhost:27020") \
+        .option("database", "db_goodread") \
+        .option("collection", "tb_book") \
+        .load()
 
-# Convert the Kafka value (which is in bytes) to string and parse it as JSON
-parsed_df = kafka_df.selectExpr("CAST(value AS STRING) as json_string") \
-    .select(from_json(col("json_string"), schema).alias("data")) \
-    .select("data.*")
+# Convert the JSON data to columns
+
 
 # Data cleaning
-cleaned_df = parsed_df.withColumn("book_id", F.regexp_extract("bookUrl", r'book/show/(\d+)', 1).cast(IntegerType())) \
+cleaned_df = mongo_df.withColumn("book_id", F.regexp_extract("bookUrl", r'book/show/(\d+)', 1).cast(IntegerType())) \
     .withColumn("author_id", F.regexp_extract("authorUrl", r'author/show/(\d+)', 1).cast(IntegerType())) \
     .withColumn("prices", F.regexp_extract("prices", r'\$(\d+\.\d+)', 1).cast(FloatType())) \
     .withColumn("rating", col("rating").cast(FloatType())) \
@@ -59,15 +36,17 @@ cleaned_df = parsed_df.withColumn("book_id", F.regexp_extract("bookUrl", r'book/
     .withColumn("pages_n", F.regexp_extract("pages", r'(\d+)', 1).cast(IntegerType())) \
     .withColumn("cover", F.regexp_extract("pages", r',\s*(\w+)$', 1)) \
     .withColumn("publish", F.to_date(F.regexp_extract(col("publish"), r'(\w+ \d{1,2}, \d{4})', 1), "MMMM d, yyyy")) \
-    .drop("pages", "bookUrl", "authorUrl")
+    .drop("pages")
 
+# Split data for different tables
 # Split data for different tables
 author_df = cleaned_df.select("author_id", "author").distinct()
 book_df = cleaned_df.select("book_id", "bookname", "author_id", "prices", "describe", "pages_n", "cover", "publish")
-ratings_df = cleaned_df.select("book_id", "rating", "ratingcount", "reviews", "fivestars", "fourstars", "threestars", "twostars", "onestar")
+ratings_df = cleaned_df.select("book_id", "rating", "fivestars", "fourstars", "threestars", "twostars", "onestar")
+describe_df = cleaned_df.select("book_id", "author_id", "describe", "bookUrl").distinct()
 
 # Define the function to write each micro-batch to PostgreSQL
-def write_to_postgres(batch_df, batch_id, table_name):
+def write_to_postgres(df, table_name):
     db_properties = {
         "user": "admin",
         "password": "admin",
@@ -76,25 +55,10 @@ def write_to_postgres(batch_df, batch_id, table_name):
     db_url = "jdbc:postgresql://localhost:5432/goodread"
 
     # Write the DataFrame to PostgreSQL
-    batch_df.write.jdbc(url=db_url, table=table_name, mode="append", properties=db_properties)
+    df.write.jdbc(url=db_url, table=table_name, mode="append", properties=db_properties)
 
-# Write the streaming DataFrame to PostgreSQL using foreachBatch
-author_query = author_df.writeStream \
-    .foreachBatch(lambda df, id: write_to_postgres(df, id, "dim_author")) \
-    .outputMode("append") \
-    .start()
-
-book_query = book_df.writeStream \
-    .foreachBatch(lambda df, id: write_to_postgres(df, id, "dim_book")) \
-    .outputMode("append") \
-    .start()
-
-ratings_query = ratings_df.writeStream \
-    .foreachBatch(lambda df, id: write_to_postgres(df, id, "fact_book_ratings")) \
-    .outputMode("append") \
-    .start()
-
-# Wait for the streaming queries to terminate
-author_query.awaitTermination()
-book_query.awaitTermination()
-ratings_query.awaitTermination()
+# Write each DataFrame to PostgreSQL in the correct order
+write_to_postgres(author_df, "Author")       # Insert data into Author table
+write_to_postgres(ratings_df, "Rating")      # Insert data into Rating table
+write_to_postgres(book_df, "Book")           # Insert data into Book table
+write_to_postgres(describe_df, "Describe")   # Insert data into Describe table
