@@ -1,10 +1,12 @@
+-- Tạo bảng dim_author
 CREATE TABLE dim_author (
-    author_id INTEGER PRIMARY KEY,
+    author_id SERIAL PRIMARY KEY,
     author_name VARCHAR(255) NOT NULL
 );
 
+-- Tạo bảng dim_book
 CREATE TABLE dim_book (
-    book_id INTEGER PRIMARY KEY,
+    book_id SERIAL PRIMARY KEY,
     bookname VARCHAR(255) NOT NULL,
     author_id INTEGER REFERENCES dim_author(author_id),
     prices DECIMAL(5, 2),
@@ -14,6 +16,7 @@ CREATE TABLE dim_book (
     publish DATE
 );
 
+-- Tạo bảng fact_book_ratings
 CREATE TABLE fact_book_ratings (
     book_id INTEGER REFERENCES dim_book(book_id),
     rating FLOAT,
