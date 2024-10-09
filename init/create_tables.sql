@@ -1,7 +1,7 @@
 -- Tạo bảng dim_author
 CREATE TABLE Author (
-    id_author SERIAL PRIMARY KEY,
-    author_name VARCHAR(255)
+    author_id INT PRIMARY KEY,
+    author VARCHAR(255)
 );
 
 CREATE TABLE Rating (
@@ -17,12 +17,12 @@ CREATE TABLE Rating (
 
 -- Tạo bảng book
 CREATE TABLE Book (
-    book_id SERIAL PRIMARY KEY,
+    book_id INT PRIMARY KEY,
     rating_id INT,
-    id_author INT,
+    author_id INT,
     rating FLOAT,
-    description TEXT,
-    author_name VARCHAR(255),
+    describe TEXT,
+    author VARCHAR(255),
     bookname VARCHAR(255),
     publish VARCHAR(255),
     prices FLOAT,
@@ -37,19 +37,19 @@ CREATE TABLE Book (
     twostars INT,
     onestar INT,
     FOREIGN KEY (rating_id) REFERENCES Rating(book_id),
-    FOREIGN KEY (id_author) REFERENCES Author(id_author)
+    FOREIGN KEY (author_id) REFERENCES Author(author_id)
 );
 
 
 
 CREATE TABLE Describe (
     book_id INT,
-    id_author INT,
-    description TEXT,
+    author_id INT,
+    describe TEXT,
     bookUrl VARCHAR(255),
-    PRIMARY KEY (book_id, id_author),
+    PRIMARY KEY (book_id, author_id),
     FOREIGN KEY (book_id) REFERENCES Book(book_id),
-    FOREIGN KEY (id_author) REFERENCES Author(id_author)
+    FOREIGN KEY (author_id) REFERENCES Author(author_id)
 );
 
 
