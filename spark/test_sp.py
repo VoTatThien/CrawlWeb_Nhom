@@ -13,7 +13,7 @@ spark = SparkSession.builder \
 
 
 # Read data from Kafka topic
-mongo_df = spark.read.format("mongo").option("uri", "mongodb://localhost:27020") \
+mongo_df = spark.read.format("mongo").option("uri", "mongodb://mongodb:27017") \
         .option("database", "db_goodread") \
         .option("collection", "tb_book") \
         .load()
@@ -56,7 +56,7 @@ def write_to_postgres(df, table_name):
         "password": "admin",
         "driver": "org.postgresql.Driver"
     }
-    db_url = "jdbc:postgresql://localhost:5432/goodread"
+    db_url = "jdbc:postgresql://postgres:5432/goodread"
 
     # Write the DataFrame to PostgreSQL
     df.write.jdbc(url=db_url, table=table_name, mode="append", properties=db_properties)
