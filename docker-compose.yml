@@ -70,6 +70,7 @@ services:
       - postgres
     networks:
       - my_network
+    restart: no
 
 networks:
   my_network:

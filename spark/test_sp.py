@@ -43,7 +43,7 @@ cleaned_df = mongo_df.withColumn("book_id", F.regexp_extract("bookUrl", r'book/s
 author_df = cleaned_df.select("author_id", "author").distinct()
 # author_df = author_df.withColumnRenamed("author", "author_name")
 
-book_df = cleaned_df.select("book_id", "bookname", "author_id", "prices", "describe", "pages_n", "cover", "publish")
+book_df = cleaned_df.select("book_id", "bookname", "author_id", "prices", "describe", "pages_n", "cover", "publish", "rating", "ratingcount", "reviews", "author")
 # book_df = book_df.withColumnRenamed("describe", "description")
 
 ratings_df = cleaned_df.select("book_id", "rating", "fivestars", "fourstars", "threestars", "twostars", "onestar")

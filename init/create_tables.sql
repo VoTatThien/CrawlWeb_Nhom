@@ -6,7 +6,7 @@ CREATE TABLE Author (
 
 CREATE TABLE Rating (
     book_id INT PRIMARY KEY,
-    rating FLOAT,
+    rating  DECIMAL(5, 2),
     fivestars INT,
     fourstars INT,
     threestars INT,
@@ -18,25 +18,18 @@ CREATE TABLE Rating (
 -- Tạo bảng book
 CREATE TABLE Book (
     book_id INT PRIMARY KEY,
-    rating_id INT,
     author_id INT,
-    rating FLOAT,
+    rating  DECIMAL(5, 2),
     describe TEXT,
     author VARCHAR(255),
     bookname VARCHAR(255),
-    publish VARCHAR(255),
-    prices FLOAT,
-    rating_count INT,
+    publish Date,
+    prices  DECIMAL(5, 2),
+    ratingcount INT,
     reviews INT,
     pages_n INT,
     cover VARCHAR(255),
-    bookUrl VARCHAR(255),
-    fivestars INT,
-    fourstars INT,
-    threestars INT,
-    twostars INT,
-    onestar INT,
-    FOREIGN KEY (rating_id) REFERENCES Rating(book_id),
+    FOREIGN KEY (book_id) REFERENCES Rating(book_id),
     FOREIGN KEY (author_id) REFERENCES Author(author_id)
 );
 
