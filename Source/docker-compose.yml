@@ -1,0 +1,75 @@
+services:
+  app_crawler:
+    build: 
+      context: ./goodread
+      dockerfile: Dockerfile
+    container_name: app_crawler
+    depends_on:
+      - mongodb
+    networks:
+      - my_network
+
+
+  mongodb:
+    image: mongo:4.4
+    container_name: mongodb
+    ports:
+      - "27020:27017"
+    networks:
+        - my_network
+
+
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=admin
+      - POSTGRES_DB=goodread
+      - PGPORT=5432
+    ports:
+      - 5432:5432
+    volumes:
+      - ./init:/docker-entrypoint-initdb.d
+    networks:
+      - my_network
+
+
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    depends_on:
+      - postgres
+    ports:
+      - "5050:80"
+    networks:
+      - my_network
+
+  spark:
+    image: bitnami/spark:latest
+    container_name: spark
+    environment:
+      - SPARK_MODE=driver
+      - SPARK_MASTER_URL=spark://spark:7077
+      - SPARK_DRIVER_HOST=spark
+    ports:
+      - "4040:4040"
+    volumes:
+      - ./spark:/spark  # Mount the 'spark' folder containing your script
+    command: "spark-submit --packages org.mongodb.spark:mongo-spark-connector_2.12:3.0.0,org.postgresql:postgresql:42.5.0 /spark/test_sp.py"
+    depends_on:
+      - mongodb
+      - postgres
+    networks:
+      - my_network
+
+
+networks:
+  my_network:
+
+    
+volumes:
+  postgres-data:
+    name: postgres-data
