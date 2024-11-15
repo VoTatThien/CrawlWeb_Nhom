@@ -25,4 +25,6 @@ class GoodreadItem(scrapy.Item):
     publish = scrapy.Field()
     authorUrl = scrapy.Field()
     genre = scrapy.Field()
+    score = scrapy.Field()
+    votes = scrapy.Field()
 

@@ -20,13 +20,18 @@ class GoodreadcrawlSpider(scrapy.Spider):
             item = GoodreadItem()
             item['bookUrl'] = response.urljoin(book_item)
             item['number'] = i + 1 + self.page_number * 100
+            score = response.xpath(f'(//span[@class="smallText uitext"]/a[1]/text())[{i+1}]').get()
+            votes = response.xpath(f'(//span[@class="smallText uitext"]/a[2]/text())[{i+1}]').get()
+            
+            item['score'] = score
+            item['votes'] = votes
             self.logger.info(f'Processing book URL: {item["bookUrl"]} with number {item["number"]}')
             request = scrapy.Request(url=item['bookUrl'], callback=self.parseBookDetailPage)
             request.meta['datacourse'] = item
             yield request
         
         next_page = response.xpath('//a[@class="next_page"]/@href').get()
-        if next_page and self.page_number < 11:
+        if next_page and self.page_number < 1:
             self.page_number += 1   
             self.logger.info(f'Found next page: {next_page}')
             yield scrapy.Request(url=response.urljoin(next_page), callback=self.parse)

@@ -20,6 +20,7 @@ CREATE TABLE Book (
     book_id INT PRIMARY KEY,
     author_id INT,
     rating  DECIMAL(5, 2),
+    genre VARCHAR(255),
     describe TEXT,
     author VARCHAR(255),
     bookname VARCHAR(255),
