@@ -1,6 +1,6 @@
 from pyspark.sql import functions as F
-from pyspark.sql.types import IntegerType, FloatType, ArrayType, StringType
-from pyspark.sql.functions import  col, element_at
+from pyspark.sql.types import IntegerType, FloatType
+from pyspark.sql.functions import  col
 from pyspark.sql import SparkSession
 import psycopg2
 
@@ -15,7 +15,7 @@ spark = SparkSession.builder \
 
 # Read data from Kafka topic
 df = spark.readStream.format("kafka") \
-        .option("kafka.bootstrap.servers", "localhost:9092") \
+        .option("kafka.bootstrap.servers", "kafka:29092") \
         .option("subscribe", "book") \
         .option("startingOffsets", "earliest") \
         .load()
@@ -58,9 +58,7 @@ cleaned_df = cleaned_df.withColumn("book_id", F.regexp_extract("bookUrl", r'book
     .withColumn("twostars", F.regexp_replace(col("twostars"), r"[^\d]", "").cast(IntegerType())) \
     .withColumn("onestar", F.regexp_replace(col("onestar"), r"[^\d]", "").cast(IntegerType())) \
     .withColumn("pages_n", F.regexp_extract("pages", r'(\d+)', 1).cast(IntegerType())) \
-    .withColumn("cover", F.regexp_extract("pages", r',\s*(\w+)$', 1)) \
-    .withColumn("genre", F.from_json("genre", ArrayType(StringType()))) \
-    .withColumn("genre", element_at(col("genre"), 1)) \
+    .withColumn("cover", F.regexp_extract("pages", r",\s*(.*)$", 1)) \
     .withColumn("publish", F.to_date(F.regexp_extract(col("publish"), r'(\w+ \d{1,2}, \d{4})', 1), "MMMM d, yyyy")) \
     .drop("pages")
 
@@ -79,7 +77,7 @@ def write_batch_to_postgres(batch_df):
         dbname='goodread',
         user='admin',
         password='admin',
-        host='localhost',
+        host='postgres',
         port='5432'
     ) as conn:
         with conn.cursor() as cur:
@@ -124,7 +122,7 @@ def insert_books(cur, book_df):
     for row in books:
         cur.execute(
             """
-            INSERT INTO Book (book_id, author_id, rating, genre, describe, author, bookname, publish, prices, ratingcount, reviews, pages_n, cover)
+            INSERT INTO Book (book_id, author_id, rating, genre, describe, author, bookname, publish, prices, ratingcount, quantity, pages_n, cover)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) ON CONFLICT (book_id) DO NOTHING;
             """,
             (row['book_id'], row['author_id'], row['rating'], row['genre'] ,row['describe'], row['author'],

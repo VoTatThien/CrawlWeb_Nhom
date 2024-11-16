@@ -24,9 +24,8 @@ dag = DAG(
 )
 
 run_app_crawler_compose = BashOperator(
-
     task_id="run_app_crawler_compose",
-    bash_command="docker-compose up -d app_crawler",
+    bash_command="docker start -ai app_crawler",
     dag=dag
 )
 
@@ -63,5 +62,12 @@ send_data_task = PythonOperator(
     dag=dag
 )
 
+run_spark = BashOperator(
+    task_id="run_spark",
+    bash_command="docker start -ai spark",
+    dag=dag
+)
+
+
 # Task execution order
-run_app_crawler_compose >> send_data_task
+run_app_crawler_compose >> send_data_task >> run_spark

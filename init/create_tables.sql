@@ -1,4 +1,5 @@
 -- Tạo bảng dim_author
+
 CREATE TABLE Author (
     author_id INT PRIMARY KEY,
     author VARCHAR(255)
@@ -27,7 +28,7 @@ CREATE TABLE Book (
     publish Date,
     prices  DECIMAL(5, 2),
     ratingcount INT,
-    reviews INT,
+    quantity  INT,
     pages_n INT,
     cover VARCHAR(255),
     FOREIGN KEY (book_id) REFERENCES Rating(book_id),

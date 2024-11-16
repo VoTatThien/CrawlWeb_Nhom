@@ -55,7 +55,10 @@ services:
       - "4040:4040"
     volumes:
       - ./spark:/spark # Mount the 'spark' folder containing your script
-    command: "spark-submit --packages org.mongodb.spark:mongo-spark-connector_2.12:3.0.0,org.postgresql:postgresql:42.5.0 /spark/test_sp.py"
+    command: >
+      bash -c "pip install psycopg2-binary &&
+              spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.0,org.postgresql:postgresql:42.5.0 /spark/test_sp.py"
+
     depends_on:
       - mongodb
       - postgres
@@ -160,7 +163,7 @@ services:
       retries: 5
     volumes:
       - ./dags:/opt/airflow/dags
-      - /var/run/docker.sock:/var/run/docker.sock
+
     networks:
       - my_network
 
@@ -180,11 +183,13 @@ services:
                airflow scheduler"
     volumes:
       - ./dags:/opt/airflow/dags
-      - /var/run/docker.sock:/var/run/docker.sock
+
     networks:
       - my_network
 
 networks:
+  my_network:
+
 
 volumes:
   postgres-data:

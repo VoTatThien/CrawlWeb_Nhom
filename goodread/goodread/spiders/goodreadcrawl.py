@@ -31,7 +31,7 @@ class GoodreadcrawlSpider(scrapy.Spider):
             yield request
         
         next_page = response.xpath('//a[@class="next_page"]/@href').get()
-        if next_page and self.page_number < 1:
+        if next_page and self.page_number < 19:
             self.page_number += 1   
             self.logger.info(f'Found next page: {next_page}')
             yield scrapy.Request(url=response.urljoin(next_page), callback=self.parse)
@@ -46,9 +46,9 @@ class GoodreadcrawlSpider(scrapy.Spider):
         item['author'] = response.xpath('normalize-space(//span[@class="ContributorLink__name"]/text())').get()
         item['authorUrl'] = response.xpath('//a[@class="ContributorLink"]/@href').get()
         item['prices'] = response.xpath('//*[@id="__next"]/div[2]/main/div[1]/div[1]/div/div[2]/div[2]/div/div[1]/button/span[1]/text()').get()
-        item['genre'] = response.xpath('/html/body/div[1]/div[2]/main/div[1]/div[2]/div[2]/div[2]/div[5]/ul/span[1]/span[2]/a/span/text()').getall()
+        item['genre'] = response.xpath('//span[@class="BookPageMetadataSection__genreButton"]//a//span/text()').get()   
 
-        description = response.xpath('normalize-space(string(//span[@class="Formatted"]))').get()
+        description = response.xpath('normalize-space(string(//span[@class="Formatted"]))').get()   
         item['describe'] = ''.join(description)
 
         item['rating'] = response.xpath('//div[@class="RatingStatistics__rating"]/text()').get()
