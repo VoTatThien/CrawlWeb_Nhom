@@ -163,7 +163,7 @@ services:
       retries: 5
     volumes:
       - ./dags:/opt/airflow/dags
-
+      - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - my_network
 
@@ -183,7 +183,7 @@ services:
                airflow scheduler"
     volumes:
       - ./dags:/opt/airflow/dags
-
+      - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - my_network
 

@@ -39,34 +39,25 @@ class GoodreadcrawlSpider(scrapy.Spider):
     def parseBookDetailPage(self, response):
         item = response.meta['datacourse']
        # Lấy thông tin sách từ trang chi tiết
-        
-
-
         item['bookname'] = response.xpath('normalize-space(//h1[@class="Text Text__title1"]/text())').get()
         item['author'] = response.xpath('normalize-space(//span[@class="ContributorLink__name"]/text())').get()
         item['authorUrl'] = response.xpath('//a[@class="ContributorLink"]/@href').get()
         item['prices'] = response.xpath('//*[@id="__next"]/div[2]/main/div[1]/div[1]/div/div[2]/div[2]/div/div[1]/button/span[1]/text()').get()
         item['genre'] = response.xpath('//span[@class="BookPageMetadataSection__genreButton"]//a//span/text()').get()   
-
         description = response.xpath('normalize-space(string(//span[@class="Formatted"]))').get()   
         item['describe'] = ''.join(description)
-
         item['rating'] = response.xpath('//div[@class="RatingStatistics__rating"]/text()').get()
         # Xử lý số lượng đánh giá
         ratings_count = response.xpath('//span[@data-testid="ratingsCount"]/text()').get()
         item['ratingcount'] = ''.join(ratings_count)
-
         reviews = response.xpath('//span[@data-testid="reviewsCount"]/text()').get()
         item['reviews'] = ''.join(reviews)
-
         # Số lượng sao đánh giá
         item['fivestars'] = response.xpath('//div[@data-testid="labelTotal-5"]/text()').get()
         item['fourstars'] = response.xpath('//div[@data-testid="labelTotal-4"]/text()').get()
         item['threestars'] = response.xpath('//div[@data-testid="labelTotal-3"]/text()').get()
         item['twostars'] = response.xpath('//div[@data-testid="labelTotal-2"]/text()').get()
         item['onestar'] = response.xpath('//div[@data-testid="labelTotal-1"]/text()').get()
-
         item['pages'] = response.xpath('//p[@data-testid="pagesFormat"]/text()').get()
         item['publish'] = response.xpath('//p[@data-testid="publicationInfo"]/text()').get()
-
         yield item

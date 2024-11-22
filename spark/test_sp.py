@@ -4,14 +4,12 @@ from pyspark.sql.functions import  col
 from pyspark.sql import SparkSession
 import psycopg2
 
-
 # Initialize Spark session
 spark = SparkSession.builder \
         .appName('SparkKafkaToPostgres') \
         .config('spark.jars.packages', "org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.3," 
                                         "org.postgresql:postgresql:42.5.0") \
         .getOrCreate()
-
 
 # Read data from Kafka topic
 df = spark.readStream.format("kafka") \

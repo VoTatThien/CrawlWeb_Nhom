@@ -64,7 +64,7 @@ send_data_task = PythonOperator(
 
 run_spark = BashOperator(
     task_id="run_spark",
-    bash_command="docker start -ai spark",
+    bash_command="docker start spark",
     dag=dag
 )
 
